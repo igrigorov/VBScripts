@@ -5,20 +5,50 @@ Dim output
 
 ' Functions first
 
+
+' Returns true if the file is of matching extension, according to the mode
+' 	mode = "m" = music
+'	mode = "p" = picture
+Function checkExtension(filename, mode)
+	filenameL = LCase(filename)
+	ext3 = Right(filenameL, 3)
+	ext4 = Right(filenameL, 4)
+
+	checkExtension = False
+
+	If mode = "m" Then
+		If ext3 = "mp3" Then 
+			checkExtension = true
+		End If
+	Else
+		If ext3 = "jpg" Or ext4 = "jpeg" Or ext3 = "png" Then 
+			checkExtension = true
+		End If
+	End If
+End Function
+
+
+' Recursive function, executing the main course of work:
+' - Creation of .nomedia files
+' - Moving of picture files, if mixed with music files, along with
+' - Creation of /art subfolder
 Function recurseFolder (pivotFolder)
 	Dim folders
 	Dim localOutput
 	
 	foundPic = false
 	foundMp3 = false
+	' check if the folder contains file of X type; only switch-on flags, otherwise they get reset wrongly
 	For Each file In pivotFolder.Files
-		If Right(file.Name, 3) = "mp3" Then 
-			foundMp3 = true
+		If foundMp3 = false Then
+			foundMp3 = checkExtension(file.Name, "m")
 		End If
-		If Right(file.Name, 3) = "jpg" Or Right(file.Name, 4) = "jpeg" Or Right(file.Name, 3) = "png" Then 
-			foundPic = true
+		If foundPic = false Then
+			foundPic = checkExtension(file.Name, "p")
 		End If
 	Next
+	
+	MsgBox "Folder" & pivotFolder.Name & ": music=" & foundMp3 & ": pics=" & foundPic
 
 	Set folders = pivotFolder.SubFolders
 	foundSubfolders = folders.Count > 0
@@ -43,6 +73,7 @@ Function recurseFolder (pivotFolder)
 End Function
 
 
+' Creates an /art subfolder, with a .nomedia file in it and puts all picture files in the current folder in it
 Function createArtNomediaFolder (pivotFolder)
 	On Error Resume Next
 
@@ -58,7 +89,7 @@ Function createArtNomediaFolder (pivotFolder)
 
 	' move pic files in the art folder
 	For Each file In pivotFolder.Files
-		If Right(file.Name, 3) = "jpg" Or Right(file.Name, 4) = "jpeg" Or Right(file.Name, 3) = "png" Then 
+		If checkExtension(file.Name, "p") = true Then 
 			' MsgBox file.Path & ", " & pivotFolder.path & "\art"
 			file.Move pivotFolder.path & "\art\"
 		End If
@@ -68,6 +99,7 @@ Function createArtNomediaFolder (pivotFolder)
 End Function
 
 
+' Creates an .nomedia file in the current folder
 Function createNomediaFile (pivotFolder)
 	On Error Resume Next
 
@@ -83,7 +115,8 @@ Function createNomediaFile (pivotFolder)
 	createNomediaFile = pivotFolder.Path & ": Created .nomedia file" & vbCrLf
 End Function
 
-' Main code
+
+' Main code with some logging
 
 sFolder = Wscript.Arguments.Item(0)
 If sFolder = "" Then
